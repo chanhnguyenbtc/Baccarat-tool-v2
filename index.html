@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Baccarat Casino AI</title>
+<style>
+body{
+  font-family:Arial;
+  background:radial-gradient(circle at top,#0a1a2f,#02050d);
+  color:#fff;
+  text-align:center;
+  padding:10px;
+}
+h2{
+  color:#ffd700;
+  margin:8px 0;
+  text-shadow:0 0 10px #ffd700;
+  font-size:22px;
+}
+
+/* BUTTONS */
+button{
+  padding:12px 22px;
+  margin:6px;
+  font-size:15px;
+  border-radius:14px;
+  border:none;
+  font-weight:bold;
+  box-shadow:0 0 12px rgba(0,0,0,0.6);
+}
+.b{background:#ff2e2e;color:white;box-shadow:0 0 10px #ff2e2e;}
+.p{background:#1e90ff;color:white;box-shadow:0 0 10px #1e90ff;}
+.t{background:#ffd700;color:black;box-shadow:0 0 10px #ffd700;}
+.u{background:#2ed573;color:black;}
+.r{background:#ff6b81;color:black;}
+
+/* PANELS */
+.box{
+  background:linear-gradient(180deg,#0f1f3d,#071226);
+  padding:14px;
+  border-radius:16px;
+  margin-top:10px;
+  text-align:left;
+  box-shadow:0 0 18px rgba(0,0,0,0.7);
+  border:1px solid rgba(255,255,255,0.05);
+}
+
+/* PROGRESS BAR */
+.bar{
+  height:12px;
+  background:#111;
+  border-radius:8px;
+  overflow:hidden;
+  margin-top:4px;
+}
+.fillB{height:100%;background:#ff2e2e;box-shadow:0 0 10px #ff2e2e;}
+.fillP{height:100%;background:#1e90ff;box-shadow:0 0 10px #1e90ff;}
+.fillT{height:100%;background:#ffd700;}
+
+/* BIG ROAD */
+.road{
+  display:grid;
+  grid-template-columns:repeat(14,22px);
+  gap:4px;
+  justify-content:center;
+  margin-top:6px;
+}
+.cell{
+  width:22px;
+  height:22px;
+  border-radius:50%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:11px;
+  box-shadow:0 0 8px rgba(0,0,0,0.8);
+}
+.B{background:#ff2e2e;box-shadow:0 0 8px #ff2e2e;}
+.P{background:#1e90ff;box-shadow:0 0 8px #1e90ff;}
+.T{background:#ffd700;color:black;}
+
+/* AI STATUS COLORS */
+.green{color:#2ed573;}
+.yellow{color:#ffd700;}
+.red{color:#ff4757;}
+</style>
+</head>
+<body>
+
+<h2>🎰 BACCARAT AI CASINO</h2>
+
+<button class="b" onclick="add('B')">Banker</button>
+<button class="p" onclick="add('P')">Player</button>
+<button class="t" onclick="add('T')">Tie</button><br>
+<button class="u" onclick="undo()">Undo</button>
+<button class="r" onclick="resetData()">Reset</button>
+
+<div class="box" id="stats"></div>
+
+<div class="box">
+<div>📊 Xác suất động:</div>
+<div>🔴 Banker</div>
+<div class="bar"><div id="barB" class="fillB"></div></div>
+<div>🔵 Player</div>
+<div class="bar"><div id="barP" class="fillP"></div></div>
+<div>🟡 Tie</div>
+<div class="bar"><div id="barT" class="fillT"></div></div>
+</div>
+
+<div class="box">
+<div>🎰 Big Road (Casino):</div>
+<div class="road" id="road"></div>
+</div>
+
+<div class="box" id="ai"></div>
+
+<script>
+let data=[];
+
+function add(x){
+  data.push(x);
+  render();
+}
+function undo(){
+  data.pop();
+  render();
+}
+function resetData(){
+  data=[];
+  render();
+}
+
+function render(){
+  let b=data.filter(x=>x=='B').length;
+  let p=data.filter(x=>x=='P').length;
+  let t=data.filter(x=>x=='T').length;
+  let total=b+p+t;
+
+  let bRate=(b/total*100||0).toFixed(1);
+  let pRate=(p/total*100||0).toFixed(1);
+  let tRate=(t/total*100||0).toFixed(1);
+
+  document.getElementById("stats").innerHTML=
+    `📊 Tổng ván: ${total}<br>
+     🔴 Banker: ${b} (${bRate}%)<br>
+     🔵 Player: ${p} (${pRate}%)<br>
+     🟡 Tie: ${t} (${tRate}%)`;
+
+  document.getElementById("barB").style.width=bRate+"%";
+  document.getElementById("barP").style.width=pRate+"%";
+  document.getElementById("barT").style.width=tRate+"%";
+
+  let road=document.getElementById("road");
+  road.innerHTML="";
+  data.slice(-84).forEach(x=>{
+    let d=document.createElement("div");
+    d.className="cell "+x;
+    d.innerText=x;
+    road.appendChild(d);
+  });
+
+  // AI LOGIC
+  let streak=1;
+  for(let i=data.length-1;i>0;i--){
+    if(data[i]==data[i-1] && data[i]!="T") streak++;
+    else break;
+  }
+
+  let zigzag=0;
+  for(let i=data.length-1;i>0;i--){
+    if(data[i]!=data[i-1]) zigzag++;
+    else break;
+  }
+
+  let noise = zigzag>=4;
+  let diff=Math.abs(b-p);
+  let confidence=Math.min(92, Math.max(35, diff*7 + streak*6));
+
+  let trend="⚖️ Không rõ";
+  let trendColor="yellow";
+  if(streak>=4){
+    trend="🔥 Cầu bệt "+(data[data.length-1]=="B"?"Banker":"Player")+" ("+streak+")";
+    trendColor="green";
+  }else if(zigzag>=4){
+    trend="🌀 Cầu zigzag";
+    trendColor="red";
+  }
+
+  let suggest="❌ NO BET (cầu nhiễu)";
+  let suggestColor="red";
+  if(!noise && total>=6){
+    suggest=b>p?"👉 Gợi ý: BANKER":"👉 Gợi ý: PLAYER";
+    suggestColor="green";
+  }
+
+  let risk="⚠️ Trung bình";
+  let riskColor="yellow";
+  if(noise) {risk="⛔ Cao"; riskColor="red";}
+  else if(streak>=5) {risk="🟢 Thấp"; riskColor="green";}
+
+  document.getElementById("ai").innerHTML=
+    `<b>🧠 AI ANALYSIS</b><br>
+     Trend: <span class="${trendColor}">${trend}</span><br>
+     Risk: <span class="${riskColor}">${risk}</span><br><br>
+     <b>🤖 AI SIGNAL</b><br>
+     <span class="${suggestColor}">${suggest}</span><br>
+     Confidence: ${confidence}%`;
+}
+</script>
+
+</body>
+</html>
